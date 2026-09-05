@@ -7,8 +7,6 @@ export interface ConnectionConfig {
   port: number;
   username: string;
   password: string;
-  initialDatabase: string;
-  ssl: boolean;
   timeout: number;
 }
 export interface ServerInfo {
@@ -67,8 +65,6 @@ export interface SavedServer {
   host: string;
   port: number;
   username: string;
-  initialDatabase: string;
-  ssl: boolean;
   timeout: number;
   status: string;
   version: string | null;

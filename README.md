@@ -23,6 +23,8 @@ Preencha as variáveis antes de continuar. Se já existir `.env` ou `.env.local`
 | `BASECONTROL_WORKER`         | `embedded` para processo Node persistente; `external` para worker separado.         |
 | `NEXT_PUBLIC_APP_NAME`       | `BaseControl`.                                                                      |
 
+O formulário não possui opções de SSL/TLS ou database inicial. O backend usa `postgres` ou `master` para a conexão administrativa. A política de transporte dos servidores externos usa `BASECONTROL_EXTERNAL_TLS=true` por padrão; configure `false` no ambiente apenas para servidores sem TLS. Isso não altera a conexão interna com o Neon.
+
 Para preencher uma chave ausente no arquivo local sem imprimi-la:
 
 ```powershell

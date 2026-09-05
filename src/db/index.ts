@@ -2,13 +2,14 @@ import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 import { AppError } from "@/lib/security/errors";
+import { normalizeInternalConnectionString } from "@/lib/database/connection-string";
 const globalDb = globalThis as unknown as { basecontrolPool?: Pool };
 export const getPool = () => {
   if (!process.env.DATABASE_URL)
     throw new AppError("Configure DATABASE_URL e execute as migrations para conectar o Neon.", 503);
   if (!globalDb.basecontrolPool) {
     globalDb.basecontrolPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: normalizeInternalConnectionString(process.env.DATABASE_URL),
       max: 8,
       connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 30000,

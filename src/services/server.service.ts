@@ -14,8 +14,6 @@ export const publicColumns = {
   host: columns.host,
   port: columns.port,
   username: columns.username,
-  initialDatabase: columns.initialDatabase,
-  ssl: columns.ssl,
   timeout: columns.timeout,
   status: columns.status,
   version: columns.version,
@@ -43,8 +41,6 @@ export const configFor = (server: typeof servers.$inferSelect): ConnectionConfig
   port: server.port,
   username: server.username,
   password: decrypt(server.encryptedPassword, server.id),
-  initialDatabase: server.initialDatabase,
-  ssl: server.ssl,
   timeout: server.timeout,
 });
 export const refreshServer = async (id: string) => {
@@ -57,8 +53,6 @@ export const refreshServer = async (id: string) => {
     eq(servers.username, server.username),
     eq(servers.encryptedPassword, server.encryptedPassword),
     eq(servers.type, server.type),
-    eq(servers.initialDatabase, server.initialDatabase),
-    eq(servers.ssl, server.ssl),
     eq(servers.timeout, server.timeout),
   );
   try {

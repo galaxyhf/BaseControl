@@ -203,11 +203,14 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
             <Button
               variant="outline"
               onClick={() => setSearch(true)}
-              className="h-9 justify-start gap-2 text-xs text-muted-foreground md:w-64"
+              aria-label="Buscar servidor ou database"
+              className="h-9 min-w-0 justify-start gap-2 text-xs text-muted-foreground md:w-72 xl:w-80"
             >
               <Search className="size-3.5" />
-              <span className="hidden md:inline">Buscar servidor ou database...</span>
-              <kbd className="ml-auto hidden rounded border bg-muted px-1.5 text-[10px] md:inline">
+              <span className="hidden min-w-0 flex-1 truncate text-left md:block">
+                Buscar servidor ou database...
+              </span>
+              <kbd className="ml-auto hidden shrink-0 rounded border bg-muted px-1.5 text-[10px] md:inline">
                 Ctrl K
               </kbd>
             </Button>

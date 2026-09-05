@@ -11,8 +11,6 @@ export const connectionSchema = z.object({
   port: z.number().int().min(1).max(65535),
   username: z.string().min(1).max(128),
   password: z.string().min(1).max(1024),
-  initialDatabase: z.string().max(128).default(""),
-  ssl: z.boolean().default(true),
   timeout: z.number().int().min(3).max(60).default(15),
 });
 export const editConnectionSchema = connectionSchema.extend({

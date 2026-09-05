@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ThemeRoot } from "@/components/shared/ThemeRoot";
 import "@fontsource/geist/400.css";
 import "@fontsource/geist/500.css";
 import "@fontsource/geist/600.css";
@@ -11,7 +12,9 @@ export const metadata: Metadata = {
 };
 const RootLayout = ({ children }: { children: React.ReactNode }) => (
   <html lang="pt-BR" suppressHydrationWarning>
-    <body>{children}</body>
+    <body>
+      <ThemeRoot>{children}</ThemeRoot>
+    </body>
   </html>
 );
 export default RootLayout;

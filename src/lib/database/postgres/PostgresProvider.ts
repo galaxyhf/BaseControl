@@ -1,4 +1,5 @@
 import { Client, type QueryResultRow } from "pg";
+import { externalTlsEnabled } from "../tls";
 import type {
   ConnectionConfig,
   DatabaseProvider,
@@ -26,7 +27,7 @@ export class PostgresProvider implements DatabaseProvider {
       user: this.config.username,
       password: this.config.password,
       database,
-      ssl: this.config.ssl ? { rejectUnauthorized: true } : false,
+      ssl: externalTlsEnabled() ? { rejectUnauthorized: true } : false,
       connectionTimeoutMillis: this.config.timeout * 1000,
       statement_timeout: this.config.timeout * 1000,
       query_timeout: (this.config.timeout + 2) * 1000,
@@ -43,7 +44,7 @@ export class PostgresProvider implements DatabaseProvider {
   private query = async <T extends QueryResultRow>(
     sql: string,
     values: unknown[] = [],
-    database = this.config.initialDatabase || "postgres",
+    database = "postgres",
   ) => this.withClient(database, async (client) => (await client.query<T>(sql, values)).rows);
   testConnection = async () => ({
     ...(await this.getServerInfo()),

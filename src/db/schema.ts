@@ -34,8 +34,6 @@ export const servers = pgTable("servers", {
   port: integer().notNull(),
   username: text().notNull(),
   encryptedPassword: text().notNull(),
-  initialDatabase: text().notNull().default(""),
-  ssl: boolean().notNull().default(true),
   timeout: integer().notNull().default(15),
   status: text().notNull().default("unknown"),
   version: text(),

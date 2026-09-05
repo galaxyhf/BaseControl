@@ -8,6 +8,13 @@
       "when": 1788562480964,
       "tag": "0000_wild_logan",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788572077934,
+      "tag": "0001_brief_medusa",
+      "breakpoints": true
     }
   ]
 }

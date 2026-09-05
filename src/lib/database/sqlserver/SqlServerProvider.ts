@@ -1,4 +1,5 @@
 import sql from "mssql";
+import { externalTlsEnabled } from "../tls";
 import type {
   ConnectionConfig,
   DatabaseInfo,
@@ -30,7 +31,7 @@ export class SqlServerProvider implements DatabaseProvider {
       requestTimeout: this.config.timeout * 1000,
       pool: { min: 0, max: 1, idleTimeoutMillis: 5000 },
       options: {
-        encrypt: this.config.ssl,
+        encrypt: externalTlsEnabled(),
         trustServerCertificate: false,
         appName: "BaseControl",
         abortTransactionOnError: true,
@@ -51,8 +52,6 @@ export class SqlServerProvider implements DatabaseProvider {
       return (await request.query<T>(query)).recordset;
     });
   testConnection = async () => {
-    if (this.config.initialDatabase && this.config.initialDatabase !== "master")
-      await this.query("SELECT 1 AS ok", undefined, this.config.initialDatabase);
     return { ...(await this.getServerInfo()), message: "Conexão estabelecida com sucesso." };
   };
   getServerInfo = async () => {

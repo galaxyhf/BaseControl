@@ -14,7 +14,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useApp } from "@/components/shared/Providers";
 import { QueryError } from "@/components/shared/QueryState";
 import { fetchApi } from "@/lib/client";
@@ -41,8 +40,6 @@ export const ServerDialog = ({
     port: server?.port || 5432,
     username: server?.username || "",
     password: "",
-    initialDatabase: server?.initialDatabase || "",
-    ssl: server?.ssl ?? true,
     timeout: server?.timeout || 15,
   });
   const [result, setResult] = useState<ConnectionResult | null>(null);
@@ -194,18 +191,7 @@ export const ServerDialog = ({
                 />
               </div>
             </div>
-            <div className="grid grid-cols-[1fr_130px] gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="server-database">
-                  Database inicial <span className="text-muted-foreground">(opcional)</span>
-                </Label>
-                <Input
-                  id="server-database"
-                  value={form.initialDatabase}
-                  onChange={(e) => change("initialDatabase", e.target.value)}
-                  placeholder={form.type === "postgres" ? "postgres" : "master"}
-                />
-              </div>
+            <div className="max-w-40">
               <div className="space-y-2">
                 <Label htmlFor="server-timeout">Timeout (seg.)</Label>
                 <Input
@@ -218,10 +204,6 @@ export const ServerDialog = ({
                 />
               </div>
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={form.ssl} onCheckedChange={(v) => change("ssl", v === true)} />
-              Utilizar conexão SSL / TLS
-            </label>
           </fieldset>
           <div className="flex gap-2 rounded-md bg-muted/60 p-3 text-xs leading-5 text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0" />A senha é criptografada no servidor e

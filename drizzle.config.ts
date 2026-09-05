@@ -1,10 +1,15 @@
 import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
+import { normalizeInternalConnectionString } from "./src/lib/database/connection-string";
 config({ path: ".env.local", quiet: true });
 config({ quiet: true });
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./src/db/migrations",
   dialect: "postgresql",
-  dbCredentials: { url: process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || "" },
+  dbCredentials: {
+    url: normalizeInternalConnectionString(
+      process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || "",
+    ),
+  },
 });
