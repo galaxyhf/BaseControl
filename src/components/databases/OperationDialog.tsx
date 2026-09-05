@@ -1,10 +1,8 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldAlert, Unplug } from "lucide-react";
-import { toast } from "sonner";
+import { OperationCard } from "@/components/operations/OperationCard";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -19,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { QueryError } from "@/components/shared/QueryState";
-import type { DatabaseInfo, DatabaseSession } from "@/lib/database/types";
+import type { DatabaseInfo, DatabaseSession, OperationRecord } from "@/lib/database/types";
 import { fetchApi } from "@/lib/client";
 export interface OperationTarget {
   action: "DROP_DATABASE" | "TERMINATE_DATABASE_CONNECTIONS" | "TERMINATE_SESSION";
@@ -40,7 +38,12 @@ export const OperationDialog = ({
   const [confirmation, setConfirmation] = useState("");
   const [terminate, setTerminate] = useState(false);
   const client = useQueryClient();
-  const router = useRouter();
+  const [queued, setQueued] = useState<OperationRecord | null>(null);
+  const { data: operations = [] } = useQuery({
+    queryKey: ["operations"],
+    queryFn: () => fetchApi<OperationRecord[]>("/api/operations"),
+    enabled: !!queued,
+  });
   const destructive = target.action === "DROP_DATABASE";
   const names = target.databases.map((d) => d.name);
   const count = names.length;
@@ -48,7 +51,7 @@ export const OperationDialog = ({
   const phrase = count === 1 ? names[0] : `DELETE ${count} DATABASES`;
   const mutation = useMutation({
     mutationFn: () =>
-      fetchApi("/api/operations", {
+      fetchApi<OperationRecord>("/api/operations", {
         method: "POST",
         body: JSON.stringify({
           action: target.action,
@@ -59,15 +62,51 @@ export const OperationDialog = ({
           sessionId: target.session?.id,
         }),
       }),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["operations"] });
-      toast.success("Operação adicionada à fila.", {
-        action: { label: "Ver progresso", onClick: () => router.push("/operations") },
+    onSuccess: (operation) => {
+      setQueued({
+        ...operation,
+        items: names.map((databaseName, index) => ({
+          id: `${operation.id}-${index}`,
+          databaseName,
+          status: "pending",
+          message: null,
+          duration: null,
+        })),
       });
-      close();
+      void client.invalidateQueries({ queryKey: ["operations"] });
       onSuccess?.();
     },
   });
+  if (queued) {
+    const operation = operations.find((item) => item.id === queued.id) ?? queued;
+    const active = ["pending", "running"].includes(operation.status);
+    return (
+      <AlertDialog
+        open
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
+      >
+        <AlertDialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {active ? "Operação em andamento" : "Resultado da operação"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {active
+                ? "Acompanhe o progresso em tempo real. Você pode fechar e continuar trabalhando."
+                : "Confira o resultado de cada database abaixo."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <OperationCard operation={operation} />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Fechar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
   return (
     <AlertDialog
       open
@@ -148,13 +187,6 @@ export const OperationDialog = ({
             Selecione até 1.000 databases por operação.
           </p>
         )}
-        <p className="text-[11px] text-muted-foreground">
-          O progresso ficará disponível em{" "}
-          <Link href="/operations" className="text-primary">
-            Operações
-          </Link>
-          .
-        </p>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={mutation.isPending}>Cancelar</AlertDialogCancel>
           <Button

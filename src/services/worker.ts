@@ -12,10 +12,11 @@ const processOperation = async (operation: typeof operations.$inferSelect) => {
     .where(eq(operationItems.operationId, operation.id));
   let completed = 0;
   let failed = 0;
+  let externalStarted = false;
   const heartbeat = setInterval(() => {
     void db()
       .update(operations)
-      .set({ heartbeatAt: new Date() })
+      .set({ heartbeatAt: sql`now()` })
       .where(and(eq(operations.id, operation.id), eq(operations.status, "running")))
       .catch(() => {});
   }, 10000);
@@ -47,6 +48,7 @@ const processOperation = async (operation: typeof operations.$inferSelect) => {
         if (current?.status !== "running")
           throw new AppError("Operação interrompida. Verifique o estado no servidor.");
         protectInternalDatabase(config, [item.databaseName]);
+        externalStarted = true;
         if (operation.action === "DROP_DATABASE")
           await provider.dropDatabase(item.databaseName, operation.terminate);
         else if (operation.action === "TERMINATE_SESSION")
@@ -65,7 +67,7 @@ const processOperation = async (operation: typeof operations.$inferSelect) => {
           .where(eq(operationItems.id, item.id));
         await tx
           .update(operations)
-          .set({ completed, failed, heartbeatAt: new Date() })
+          .set({ completed, failed, heartbeatAt: sql`now()` })
           .where(eq(operations.id, operation.id));
         await tx.insert(auditLogs).values({
           userId: operation.userId,
@@ -89,6 +91,45 @@ const processOperation = async (operation: typeof operations.$inferSelect) => {
         finishedAt: new Date(),
       })
       .where(eq(operations.id, operation.id));
+  } catch (error) {
+    const details = externalStarted
+      ? `Falha ao registrar o resultado. Atualize o servidor antes de repetir. ${safeError(error)}`
+      : `Não foi possível preparar a operação. ${safeError(error)}`;
+    await db().transaction(async (tx) => {
+      const remaining = await tx
+        .update(operationItems)
+        .set({ status: "failed", message: details })
+        .where(
+          and(
+            eq(operationItems.operationId, operation.id),
+            inArray(operationItems.status, ["pending", "running"]),
+          ),
+        )
+        .returning({ id: operationItems.id });
+      await tx
+        .update(operations)
+        .set({
+          status: "failed",
+          completed: operation.total,
+          failed: sql`${operations.failed} + ${remaining.length}`,
+          finishedAt: sql`now()`,
+          heartbeatAt: sql`now()`,
+        })
+        .where(and(eq(operations.id, operation.id), eq(operations.status, "running")));
+      await tx
+        .insert(auditLogs)
+        .values({
+          userId: operation.userId,
+          username: operation.username,
+          serverId: operation.serverId,
+          serverName: operation.serverName,
+          host: operation.host,
+          action: operation.action,
+          result: "failed",
+          details,
+          ip: operation.ip,
+        });
+    });
   } finally {
     clearInterval(heartbeat);
   }
@@ -102,7 +143,7 @@ export const workerTick = async () => {
       .where(
         and(
           eq(operations.status, "running"),
-          lt(operations.heartbeatAt, new Date(Date.now() - 120000)),
+          lt(operations.heartbeatAt, sql`now() - interval '2 minutes'`),
         ),
       )
       .for("update", { skipLocked: true });
@@ -150,7 +191,7 @@ export const workerTick = async () => {
     if (!next) return null;
     const [claimed] = await tx
       .update(operations)
-      .set({ status: "running", startedAt: new Date(), heartbeatAt: new Date() })
+      .set({ status: "running", startedAt: sql`now()`, heartbeatAt: sql`now()` })
       .where(eq(operations.id, next.id))
       .returning();
     return claimed;
@@ -159,10 +200,7 @@ export const workerTick = async () => {
     try {
       await processOperation(operation);
     } catch {
-      await db()
-        .update(operations)
-        .set({ heartbeatAt: sql`now() - interval '3 minutes'` })
-        .where(eq(operations.id, operation.id));
+      // Se o banco interno falhar, a recuperação considera apenas o heartbeat real.
     }
   }
 };

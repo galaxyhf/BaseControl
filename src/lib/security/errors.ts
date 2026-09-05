@@ -8,6 +8,8 @@ export class AppError extends Error {
 }
 export const safeError = (error: unknown): string => {
   if (error instanceof AppError) return error.message;
+  if (error instanceof Error && error.cause instanceof Error && error.cause !== error)
+    return safeError(error.cause);
   const message = error instanceof Error ? error.message : "";
   if (message.includes("The server does not support SSL connections"))
     return "O servidor não aceita SSL. Configure BASECONTROL_EXTERNAL_TLS=false no backend para conectar sem SSL.";
@@ -33,6 +35,8 @@ export const safeError = (error: unknown): string => {
     return "Não foi possível validar o certificado TLS do servidor. Verifique o certificado e a cadeia de confiança no backend.";
   if (code === "3D000")
     return "A database administrativa postgres não está disponível neste servidor.";
+  if (["42703", "42P01"].includes(code))
+    return "A estrutura do banco não corresponde ao código em execução. Verifique as migrations e reinicie a aplicação e o worker.";
   if (["42501", "EACCES"].includes(code))
     return "O usuário não possui permissão para executar esta operação.";
   if (["ECONNREFUSED", "ENOTFOUND", "EHOSTUNREACH", "ESOCKET"].includes(code))
