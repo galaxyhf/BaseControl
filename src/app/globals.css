@@ -1,0 +1,103 @@
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #f8f9fb;
+  --foreground: #20242c;
+  --card: #ffffff;
+  --card-foreground: #20242c;
+  --popover: #ffffff;
+  --popover-foreground: #20242c;
+  --primary: #336ebb;
+  --primary-foreground: #ffffff;
+  --secondary: #eff1f5;
+  --secondary-foreground: #303744;
+  --muted: #f0f2f5;
+  --muted-foreground: #767e8c;
+  --accent: #eceff3;
+  --accent-foreground: #20242c;
+  --destructive: #d34343;
+  --border: #e5e8ed;
+  --input: #dfe3e9;
+  --ring: #336ebb;
+  --radius: 0.5rem;
+  --sidebar: #ffffff;
+  --success: #218763;
+  --warning: #a97a25;
+}
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededee;
+  --card: #111111;
+  --card-foreground: #ededee;
+  --popover: #171717;
+  --popover-foreground: #ededee;
+  --primary: #5b91d6;
+  --primary-foreground: #ffffff;
+  --secondary: #202020;
+  --secondary-foreground: #ededee;
+  --muted: #191919;
+  --muted-foreground: #919197;
+  --accent: #222222;
+  --accent-foreground: #ededee;
+  --destructive: #dc5858;
+  --border: #262626;
+  --input: #303030;
+  --ring: #5b91d6;
+  --sidebar: #111111;
+  --success: #52b995;
+  --warning: #d0a353;
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+}
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+  input,
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+}
