@@ -99,7 +99,7 @@ export const App = () => {
         </div>
       </header>
 
-      <div className="grid h-[calc(100vh-3.5rem)] grid-cols-[300px_1fr]">
+      <div className="grid h-[calc(100vh-3.5rem)] grid-cols-[300px_1fr] grid-rows-[minmax(0,1fr)]">
         <aside className="border-r border-zinc-800 bg-zinc-900/30 p-5">
           <div className="mb-6">
             <h2 className="text-base font-medium">Conexão</h2>
@@ -119,7 +119,7 @@ export const App = () => {
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           {error ? <StatusBar kind="error" message={error} /> : null}
           {results.length > 0 ? (
             <StatusBar
