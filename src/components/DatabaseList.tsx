@@ -1,11 +1,14 @@
 import { Database, LoaderCircle, RefreshCw, Trash2 } from "lucide-react";
-import type { DatabaseInfo } from "../lib/types";
+import postgresqlLogo from "../assets/postgresql.svg";
+import sqlServerLogo from "../assets/sql-server.svg";
+import type { DatabaseEngine, DatabaseInfo } from "../lib/types";
 
 interface DatabaseListProps {
   databases: DatabaseInfo[];
   selected: Set<string>;
   busy: boolean;
   connected: boolean;
+  engine: DatabaseEngine;
   onRefresh: () => void;
   onToggle: (name: string) => void;
   onToggleAll: () => void;
@@ -17,6 +20,7 @@ export const DatabaseList = ({
   selected,
   busy,
   connected,
+  engine,
   onRefresh,
   onToggle,
   onToggleAll,
@@ -28,11 +32,19 @@ export const DatabaseList = ({
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
-        <div>
-          <h2 className="text-sm font-medium text-zinc-100">Bases de dados</h2>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            {connected ? `${databases.length} encontradas` : "Conecte a um servidor"}
-          </p>
+        <div className="flex items-center gap-3">
+          <img
+            className="size-8 object-contain"
+            src={engine === "postgres" ? postgresqlLogo : sqlServerLogo}
+            alt=""
+            aria-hidden="true"
+          />
+          <div>
+            <h2 className="text-sm font-medium text-zinc-100">Bases de dados</h2>
+            <p className="mt-0.5 text-xs text-zinc-500">
+              {connected ? `${databases.length} encontradas` : "Conecte a um servidor"}
+            </p>
+          </div>
         </div>
         <button
           className="icon-button"

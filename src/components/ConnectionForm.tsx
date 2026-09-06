@@ -48,6 +48,7 @@ interface ConnectionFormProps {
   initialConfig?: ConnectionConfig;
   onConnect: (config: ConnectionConfig) => Promise<void>;
   onDisconnect: () => void;
+  onEngineChange: (engine: DatabaseEngine) => void;
 }
 
 export const ConnectionForm = ({
@@ -56,6 +57,7 @@ export const ConnectionForm = ({
   initialConfig,
   onConnect,
   onDisconnect,
+  onEngineChange,
 }: ConnectionFormProps) => {
   const [storedConfig] = useState(loadStoredConfig);
   const [engine, setEngine] = useState<DatabaseEngine>(
@@ -68,6 +70,10 @@ export const ConnectionForm = ({
   const [username, setUsername] = useState(initialConfig?.username ?? storedConfig?.username ?? "");
   const [password, setPassword] = useState(initialConfig?.password ?? "");
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    onEngineChange(engine);
+  }, [engine, onEngineChange]);
 
   useEffect(() => {
     if (!Number.isInteger(port) || port < 1 || port > 65535) return;
@@ -210,9 +216,6 @@ export const ConnectionForm = ({
             {busy ? "Conectando..." : "Conectar"}
           </button>
         )}
-        <p className="mt-3 text-center text-[11px] leading-4 text-zinc-500">
-          A senha permanece somente na memória desta sessão.
-        </p>
       </div>
     </form>
   );

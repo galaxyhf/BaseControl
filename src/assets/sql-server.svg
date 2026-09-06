@@ -1,0 +1,19 @@
+<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g clip-path="url(#sql-server-clip)">
+    <path d="M23.998 33.6c10.604 0 19.2 3.223 19.2 7.2V26.4c0-3.977-8.596-7.2-19.2-7.2h-4.8v14.4h4.8Z" fill="url(#sql-server-linear-1)"/>
+    <path d="M43.199 26.4c0 3.976-8.596 7.2-19.2 7.2-6.467 0-12.187-1.2-15.666-3.037-1.884-.835-3.534.43-3.534 2.146V40.8c0 3.976 8.596 7.2 19.2 7.2s19.2-3.224 19.2-7.2V26.4Z" fill="url(#sql-server-radial-1)"/>
+    <path d="M43.199 26.4c0 3.976-8.596 7.2-19.2 7.2-6.467 0-12.187-1.2-15.666-3.037-1.884-.835-3.534.43-3.534 2.146V40.8c0 3.976 8.596 7.2 19.2 7.2s19.2-3.224 19.2-7.2V26.4Z" fill="url(#sql-server-radial-2)"/>
+    <path d="M23.999 0c10.603 0 19.2 3.224 19.2 7.2v8.156c0 1.116-1.163 3.075-3.537 2.079C36.182 15.598 30.464 14.4 23.999 14.4c-10.604 0-19.2 3.224-19.2 7.2V7.2c0-3.976 8.596-7.2 19.2-7.2Z" fill="url(#sql-server-linear-2)"/>
+    <path d="M23.999 14.4c-10.604 0-19.2-3.224-19.2-7.2v14.4c0 3.976 8.596 7.2 19.2 7.2h1.2a3.6 3.6 0 0 0 3.6-3.6V18a3.6 3.6 0 0 0-3.6-3.6h-1.2Z" fill="url(#sql-server-radial-3)"/>
+    <path d="M23.999 14.4c-10.604 0-19.2-3.224-19.2-7.2v14.4c0 3.976 8.596 7.2 19.2 7.2h1.2a3.6 3.6 0 0 0 3.6-3.6V18a3.6 3.6 0 0 0-3.6-3.6h-1.2Z" fill="url(#sql-server-radial-4)"/>
+  </g>
+  <defs>
+    <linearGradient id="sql-server-linear-1" x1="35.998" y1="19.2" x2="15.933" y2="35.819" gradientUnits="userSpaceOnUse"><stop stop-color="#0094F0"/><stop offset=".243" stop-color="#0078D4"/><stop offset=".584" stop-color="#2052CB"/><stop offset=".831" stop-color="#312A9A"/></linearGradient>
+    <radialGradient id="sql-server-radial-1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="rotate(143.591 12.088 20.237) scale(29.821 53.015)"><stop stop-color="#3BD5FF"/><stop offset="1" stop-color="#0078D4"/></radialGradient>
+    <radialGradient id="sql-server-radial-2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="rotate(146.31 15.418 20.038) scale(25.96 43.796)"><stop stop-color="#DECBFF" stop-opacity=".9"/><stop offset="1" stop-color="#DECBFF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="sql-server-linear-2" x1="32.399" y1="1.2" x2="9.668" y2="25.949" gradientUnits="userSpaceOnUse"><stop stop-color="#0FAFFF"/><stop offset=".163" stop-color="#0094F0"/><stop offset=".564" stop-color="#2052CB"/><stop offset=".764" stop-color="#312A9A"/></linearGradient>
+    <radialGradient id="sql-server-radial-3" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="rotate(137.53 9.474 10.68) scale(24.661 38.412)"><stop stop-color="#3BD5FF"/><stop offset="1" stop-color="#0078D4"/></radialGradient>
+    <radialGradient id="sql-server-radial-4" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="rotate(149.036 11.3 9.197) scale(20.991 33.6)"><stop stop-color="#DECBFF" stop-opacity=".9"/><stop offset="1" stop-color="#D1D1FF" stop-opacity="0"/></radialGradient>
+    <clipPath id="sql-server-clip"><rect width="48" height="48" rx="12.8" fill="#fff"/></clipPath>
+  </defs>
+</svg>

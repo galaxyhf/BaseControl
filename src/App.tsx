@@ -4,7 +4,7 @@ import { ConnectionForm } from "./components/ConnectionForm";
 import { DatabaseList } from "./components/DatabaseList";
 import { DeleteDialog } from "./components/DeleteDialog";
 import { dropDatabases, getErrorMessage, listDatabases } from "./lib/database";
-import type { ConnectionConfig, DatabaseInfo, DropResult } from "./lib/types";
+import type { ConnectionConfig, DatabaseEngine, DatabaseInfo, DropResult } from "./lib/types";
 
 type BusyAction = "connect" | "refresh" | "delete" | null;
 
@@ -16,6 +16,7 @@ export const App = () => {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<DropResult[]>([]);
   const [confirming, setConfirming] = useState(false);
+  const [engine, setEngine] = useState<DatabaseEngine>("postgres");
 
   const loadDatabases = async (connection: ConnectionConfig, action: BusyAction) => {
     setBusy(action);
@@ -115,6 +116,7 @@ export const App = () => {
               initialConfig={config ?? undefined}
               onConnect={handleConnect}
               onDisconnect={handleDisconnect}
+              onEngineChange={setEngine}
             />
           </div>
         </aside>
@@ -132,6 +134,7 @@ export const App = () => {
             selected={selected}
             busy={busy !== null}
             connected={config !== null}
+            engine={engine}
             onRefresh={() => config && void loadDatabases(config, "refresh")}
             onToggle={handleToggle}
             onToggleAll={handleToggleAll}
