@@ -1,6 +1,11 @@
 node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+artifacts/
 .pnpm-store/
+.npm-cache/
 .next/
+*.tsbuildinfo
 .env*
 !.env.example
-*.tsbuildinfo

@@ -1,5 +1,5 @@
-.next
 node_modules
-.pnpm-store
+dist
+src-tauri/target
 pnpm-lock.yaml
-src/db/migrations/meta
+src-tauri/Cargo.lock

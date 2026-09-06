@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    color-scheme: dark;
+  }
+  body {
+    margin: 0;
+    min-width: 760px;
+    min-height: 560px;
+    overflow: hidden;
+    background: #09090b;
+    font-family: var(--font-sans);
+  }
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid #8b5cf6;
+    outline-offset: 2px;
+  }
+  input[type="checkbox"] {
+    accent-color: #8b5cf6;
+  }
+  ::selection {
+    background: rgb(124 58 237 / 0.45);
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: #3f3f46;
+    background-clip: padding-box;
+  }
+}
+
+@layer components {
+  .field-label {
+    @apply mb-1.5 block text-xs font-medium text-zinc-400;
+  }
+  .field {
+    @apply h-9 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100 shadow-sm transition placeholder:text-zinc-700 hover:border-zinc-700 focus:border-violet-500 focus:outline-none disabled:cursor-not-allowed;
+  }
+  .check-row {
+    @apply flex items-center gap-2 text-sm text-zinc-400 select-none;
+  }
+  .check-row input {
+    @apply size-3.5 rounded border-zinc-700;
+  }
+  .button {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .button.primary {
+    @apply bg-violet-600 text-white shadow-sm hover:bg-violet-500;
+  }
+  .button.secondary {
+    @apply border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800;
+  }
+  .button.danger {
+    @apply bg-red-600 text-white shadow-sm hover:bg-red-500;
+  }
+  .icon-button {
+    @apply grid size-8 place-items-center rounded-lg text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .database-row {
+    @apply flex h-10 items-center gap-3 rounded-lg px-3 transition hover:bg-zinc-900;
+  }
+  .database-icon {
+    @apply grid size-7 place-items-center rounded-md border border-zinc-800 bg-zinc-900 text-violet-400;
+  }
+  .badge {
+    @apply rounded-md border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-[10px] text-zinc-500;
+  }
+  .dialog {
+    @apply m-auto w-[430px] rounded-xl border border-zinc-700 bg-zinc-900 p-5 text-zinc-100 shadow-2xl backdrop:bg-black/75;
+  }
+}
