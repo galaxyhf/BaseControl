@@ -21,7 +21,9 @@
         "resizable": true,
         "maximizable": false,
         "fullscreen": false,
-        "center": true
+        "center": true,
+        "devtools": false,
+        "generalAutofillEnabled": false
       }
     ],
     "security": {

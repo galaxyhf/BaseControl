@@ -109,7 +109,11 @@ export const ConnectionForm = ({
   };
 
   return (
-    <form className="flex h-full flex-col" onSubmit={(event) => void handleSubmit(event)}>
+    <form
+      className="flex h-full flex-col"
+      autoComplete="off"
+      onSubmit={(event) => void handleSubmit(event)}
+    >
       <div className="space-y-5">
         <fieldset disabled={busy || connected} className="space-y-5 disabled:opacity-65">
           <div>
@@ -137,6 +141,7 @@ export const ConnectionForm = ({
                 className="field"
                 value={host}
                 onChange={(event) => setHost(event.target.value)}
+                autoComplete="off"
                 required
                 spellCheck={false}
               />
@@ -167,7 +172,7 @@ export const ConnectionForm = ({
               className="field"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              autoComplete="username"
+              autoComplete="off"
               required
               spellCheck={false}
             />
@@ -184,7 +189,7 @@ export const ConnectionForm = ({
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
+                autoComplete="off"
                 required
               />
               <button
