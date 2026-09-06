@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-use native_tls::TlsConnector;
-use postgres_native_tls::MakeTlsConnector;
 use tiberius::{AuthMethod, Client as SqlClient, Config as SqlConfig, EncryptionLevel};
 use tokio::net::TcpStream;
 use tokio_postgres::{Client as PostgresClient, Config as PostgresConfig, NoTls};
@@ -56,37 +54,21 @@ async fn connect_postgres(config: &ConnectionConfig) -> Result<PostgresClient, S
         .password(&config.password)
         .dbname("postgres");
 
-    if config.tls {
-        let mut builder = TlsConnector::builder();
-        builder.danger_accept_invalid_certs(config.trust_server_certificate);
-        let connector = builder
-            .build()
-            .map_err(|error| format!("Falha ao configurar TLS: {error}"))?;
-        let (client, connection) = postgres
-            .connect(MakeTlsConnector::new(connector))
-            .await
-            .map_err(|error| format!("Não foi possível conectar ao PostgreSQL: {error}"))?;
-        tokio::spawn(async move {
-            let _ = connection.await;
-        });
-        Ok(client)
-    } else {
-        let (client, connection) = postgres
-            .connect(NoTls)
-            .await
-            .map_err(|error| format!("Não foi possível conectar ao PostgreSQL: {error}"))?;
-        tokio::spawn(async move {
-            let _ = connection.await;
-        });
-        Ok(client)
-    }
+    let (client, connection) = postgres
+        .connect(NoTls)
+        .await
+        .map_err(|error| format!("Não foi possível conectar ao PostgreSQL: {error}"))?;
+    tokio::spawn(async move {
+        let _ = connection.await;
+    });
+    Ok(client)
 }
 
 async fn list_postgres_databases(config: &ConnectionConfig) -> Result<Vec<DatabaseInfo>, String> {
     let client = connect_postgres(config).await?;
     let rows = client
         .query(
-            "SELECT datname, datistemplate OR datname = 'postgres' FROM pg_database WHERE datallowconn ORDER BY datname",
+            "SELECT datname, pg_database_size(datname) FROM pg_database WHERE datallowconn AND NOT datistemplate AND datname <> 'postgres' ORDER BY datname",
             &[],
         )
         .await
@@ -96,7 +78,7 @@ async fn list_postgres_databases(config: &ConnectionConfig) -> Result<Vec<Databa
         .into_iter()
         .map(|row| DatabaseInfo {
             name: row.get(0),
-            is_system: row.get(1),
+            size_bytes: row.get(1),
         })
         .collect())
 }
@@ -144,14 +126,8 @@ fn sql_server_config(config: &ConnectionConfig) -> SqlConfig {
         config.username.trim(),
         &config.password,
     ));
-    sql.encryption(if config.tls {
-        EncryptionLevel::Required
-    } else {
-        EncryptionLevel::Off
-    });
-    if config.trust_server_certificate {
-        sql.trust_cert();
-    }
+    sql.encryption(EncryptionLevel::Required);
+    sql.trust_cert();
     sql
 }
 
@@ -176,7 +152,7 @@ async fn query_sql_server_databases(
     client: &mut SqlServerClient,
 ) -> Result<Vec<DatabaseInfo>, String> {
     let rows = client
-        .query("SELECT name, CAST(CASE WHEN database_id <= 4 THEN 1 ELSE 0 END AS bit) FROM sys.databases WHERE state = 0 ORDER BY name", &[])
+        .query("SELECT databases.name, CAST(SUM(CAST(master_files.size AS bigint)) * 8192 AS bigint) FROM sys.databases AS databases INNER JOIN sys.master_files AS master_files ON databases.database_id = master_files.database_id WHERE databases.state = 0 AND databases.database_id > 4 GROUP BY databases.name ORDER BY databases.name", &[])
         .await
         .map_err(|error| format!("Falha ao listar bases SQL Server: {error}"))?
         .into_first_result()
@@ -188,10 +164,12 @@ async fn query_sql_server_databases(
             let name = row
                 .get::<&str, _>(0)
                 .ok_or_else(|| "O servidor retornou uma base sem nome.".to_string())?;
-            let is_system = row.get::<bool, _>(1).unwrap_or(false);
+            let size_bytes = row
+                .get::<i64, _>(1)
+                .ok_or_else(|| format!("O servidor não retornou o tamanho da base {name}."))?;
             Ok(DatabaseInfo {
                 name: name.to_string(),
-                is_system,
+                size_bytes,
             })
         })
         .collect()
@@ -205,7 +183,6 @@ async fn drop_sql_server_databases(
     let available: HashSet<String> = query_sql_server_databases(&mut client)
         .await?
         .into_iter()
-        .filter(|database| !database.is_system)
         .map(|database| database.name)
         .collect();
     let mut results = Vec::with_capacity(names.len());

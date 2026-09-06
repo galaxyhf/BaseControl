@@ -59,9 +59,8 @@ export const App = () => {
   };
 
   const handleToggleAll = () => {
-    const selectable = databases.filter((database) => !database.isSystem);
-    const allSelected = selectable.every((database) => selected.has(database.name));
-    setSelected(allSelected ? new Set() : new Set(selectable.map((database) => database.name)));
+    const allSelected = databases.every((database) => selected.has(database.name));
+    setSelected(allSelected ? new Set() : new Set(databases.map((database) => database.name)));
   };
 
   const handleDelete = async () => {
@@ -83,7 +82,7 @@ export const App = () => {
   const selectedNames = [...selected].sort((first, second) => first.localeCompare(second));
 
   return (
-    <main className="h-screen min-h-[560px] overflow-hidden bg-zinc-950 text-zinc-100">
+    <main className="h-screen min-h-[500px] overflow-hidden bg-zinc-950 text-zinc-100">
       <header className="flex h-14 items-center justify-between border-b border-zinc-800 px-5">
         <div className="flex items-center gap-2.5">
           <div className="grid size-8 place-items-center rounded-lg bg-violet-500 text-white shadow-lg shadow-violet-950">
@@ -100,7 +99,7 @@ export const App = () => {
         </div>
       </header>
 
-      <div className="grid h-[calc(100vh-3.5rem)] grid-cols-[320px_1fr]">
+      <div className="grid h-[calc(100vh-3.5rem)] grid-cols-[300px_1fr]">
         <aside className="border-r border-zinc-800 bg-zinc-900/30 p-5">
           <div className="mb-6">
             <h2 className="text-base font-medium">Conexão</h2>

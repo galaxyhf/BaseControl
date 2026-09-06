@@ -14,8 +14,8 @@
   }
   body {
     margin: 0;
-    min-width: 760px;
-    min-height: 560px;
+    min-width: 720px;
+    min-height: 500px;
     overflow: hidden;
     background: #09090b;
     font-family: var(--font-sans);
@@ -24,6 +24,9 @@
   input,
   select {
     font: inherit;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
   }
   button:focus-visible,
   input:focus-visible,

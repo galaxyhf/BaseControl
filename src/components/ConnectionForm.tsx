@@ -31,11 +31,7 @@ const loadStoredConfig = (): StoredConnectionConfig | null => {
       value.port < 1 ||
       value.port > 65535 ||
       !("username" in value) ||
-      typeof value.username !== "string" ||
-      !("tls" in value) ||
-      typeof value.tls !== "boolean" ||
-      !("trustServerCertificate" in value) ||
-      typeof value.trustServerCertificate !== "boolean"
+      typeof value.username !== "string"
     ) {
       return null;
     }
@@ -71,10 +67,6 @@ export const ConnectionForm = ({
   );
   const [username, setUsername] = useState(initialConfig?.username ?? storedConfig?.username ?? "");
   const [password, setPassword] = useState(initialConfig?.password ?? "");
-  const [tls, setTls] = useState(initialConfig?.tls ?? storedConfig?.tls ?? false);
-  const [trustServerCertificate, setTrustServerCertificate] = useState(
-    initialConfig?.trustServerCertificate ?? storedConfig?.trustServerCertificate ?? false,
-  );
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -85,8 +77,6 @@ export const ConnectionForm = ({
       host,
       port,
       username,
-      tls,
-      trustServerCertificate,
     };
 
     try {
@@ -94,13 +84,11 @@ export const ConnectionForm = ({
     } catch {
       // O formulário continua funcional caso o armazenamento local esteja indisponível.
     }
-  }, [engine, host, port, tls, trustServerCertificate, username]);
+  }, [engine, host, port, username]);
 
   const handleEngineChange = (nextEngine: DatabaseEngine) => {
     setEngine(nextEngine);
     setPort(DEFAULT_PORTS[nextEngine]);
-    setTls(nextEngine === "sqlserver");
-    setTrustServerCertificate(nextEngine === "sqlserver");
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -111,8 +99,6 @@ export const ConnectionForm = ({
       port,
       username: username.trim(),
       password,
-      tls,
-      trustServerCertificate,
     });
   };
 
@@ -205,26 +191,6 @@ export const ConnectionForm = ({
               </button>
             </div>
           </div>
-
-          <label className="check-row">
-            <input
-              type="checkbox"
-              checked={tls}
-              onChange={(event) => setTls(event.target.checked)}
-            />
-            Usar conexão TLS
-          </label>
-
-          {tls ? (
-            <label className="check-row">
-              <input
-                type="checkbox"
-                checked={trustServerCertificate}
-                onChange={(event) => setTrustServerCertificate(event.target.checked)}
-              />
-              Confiar no certificado do servidor
-            </label>
-          ) : null}
         </fieldset>
       </div>
 

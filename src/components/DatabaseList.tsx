@@ -22,9 +22,8 @@ export const DatabaseList = ({
   onToggleAll,
   onDelete,
 }: DatabaseListProps) => {
-  const selectable = databases.filter((database) => !database.isSystem);
   const allSelected =
-    selectable.length > 0 && selectable.every((database) => selected.has(database.name));
+    databases.length > 0 && databases.every((database) => selected.has(database.name));
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
@@ -54,7 +53,7 @@ export const DatabaseList = ({
               type="checkbox"
               checked={allSelected}
               onChange={onToggleAll}
-              disabled={busy || selectable.length === 0}
+              disabled={busy || databases.length === 0}
             />
             Selecionar todas
           </label>
@@ -73,13 +72,11 @@ export const DatabaseList = ({
           <ul className="space-y-1" aria-label="Bases disponíveis">
             {databases.map((database) => (
               <li key={database.name}>
-                <label
-                  className={`database-row ${database.isSystem ? "opacity-45" : "cursor-pointer"}`}
-                >
+                <label className="database-row cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selected.has(database.name)}
-                    disabled={busy || database.isSystem}
+                    disabled={busy}
                     onChange={() => onToggle(database.name)}
                     aria-label={`Selecionar ${database.name}`}
                   />
@@ -89,7 +86,9 @@ export const DatabaseList = ({
                   <span className="min-w-0 flex-1 truncate font-mono text-xs text-zinc-200">
                     {database.name}
                   </span>
-                  {database.isSystem ? <span className="badge">Sistema</span> : null}
+                  <span className="shrink-0 text-xs tabular-nums text-zinc-500">
+                    {formatBytes(database.sizeBytes)}
+                  </span>
                 </label>
               </li>
             ))}
@@ -113,6 +112,16 @@ export const DatabaseList = ({
       </div>
     </section>
   );
+};
+
+const formatBytes = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+
+  const units = ["KB", "MB", "GB", "TB"];
+  const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)) - 1, units.length - 1);
+  const value = bytes / 1024 ** (unitIndex + 1);
+
+  return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)} ${units[unitIndex]}`;
 };
 
 const EmptyState = ({ label }: { label: string }) => (

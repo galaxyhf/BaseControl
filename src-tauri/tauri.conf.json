@@ -14,11 +14,12 @@
       {
         "label": "main",
         "title": "BaseControl",
-        "width": 920,
-        "height": 620,
-        "minWidth": 760,
-        "minHeight": 560,
+        "width": 820,
+        "height": 540,
+        "minWidth": 720,
+        "minHeight": 500,
         "resizable": true,
+        "maximizable": false,
         "fullscreen": false,
         "center": true
       }

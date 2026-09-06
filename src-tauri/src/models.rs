@@ -8,8 +8,6 @@ pub struct ConnectionConfig {
     pub port: u16,
     pub username: String,
     pub password: String,
-    pub tls: bool,
-    pub trust_server_certificate: bool,
 }
 
 #[derive(Clone, Deserialize)]
@@ -23,7 +21,7 @@ pub enum DatabaseEngine {
 #[serde(rename_all = "camelCase")]
 pub struct DatabaseInfo {
     pub name: String,
-    pub is_system: bool,
+    pub size_bytes: i64,
 }
 
 #[derive(Serialize)]

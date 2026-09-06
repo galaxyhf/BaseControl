@@ -6,13 +6,11 @@ export interface ConnectionConfig {
   port: number;
   username: string;
   password: string;
-  tls: boolean;
-  trustServerCertificate: boolean;
 }
 
 export interface DatabaseInfo {
   name: string;
-  isSystem: boolean;
+  sizeBytes: number;
 }
 
 export interface DropResult {

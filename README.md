@@ -9,7 +9,7 @@ Aplicativo desktop enxuto para listar e excluir bases PostgreSQL e SQL Server.
 - Tailwind CSS v4 via PostCSS
 - pnpm
 
-Não há servidor web, API routes, banco interno, autenticação própria, worker ou cache de dados. O aplicativo preserva localmente o tipo de banco, host, porta, usuário e opções de TLS da última conexão; a senha existe somente na memória enquanto o aplicativo está aberto e nunca é persistida pelo BaseControl.
+Não há servidor web, API routes, banco interno, autenticação própria, worker ou cache de dados. O aplicativo preserva localmente o tipo de banco, host, porta e usuário da última conexão; a senha existe somente na memória enquanto o aplicativo está aberto e nunca é persistida pelo BaseControl.
 
 ## Requisitos
 
@@ -48,13 +48,13 @@ Os binários da versão validada também estão em `artifacts\`, fora do version
 
 ## Segurança da exclusão
 
-- Bases de sistema ficam visíveis, mas não podem ser selecionadas.
+- Bases padrão do sistema não aparecem na listagem.
 - O backend consulta novamente o servidor antes de excluir e rejeita bases protegidas.
 - A confirmação mostra os nomes exatos antes da operação permanente.
 - PostgreSQL usa `DROP DATABASE ... WITH (FORCE)`.
 - SQL Server encerra conexões com `SINGLE_USER WITH ROLLBACK IMMEDIATE` antes do `DROP DATABASE`.
 
-Use TLS sempre que o servidor oferecer suporte. A opção de confiar no certificado deve ficar ativa apenas em ambientes controlados com certificado próprio.
+PostgreSQL usa conexão sem TLS. SQL Server usa conexão criptografada e aceita o certificado apresentado pelo servidor.
 
 ## Problemas de compilação no Windows
 
