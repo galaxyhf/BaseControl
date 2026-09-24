@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Database, LoaderCircle, RefreshCw, Trash2 } from "lucide-react";
 import postgresqlLogo from "../assets/postgresql.svg";
 import sqlServerLogo from "../assets/sql-server.svg";
@@ -16,6 +17,13 @@ interface DatabaseListProps {
   onDelete: () => void;
 }
 
+type SortOption = "name-asc" | "name-desc" | "size-asc" | "size-desc";
+
+const nameCollator = new Intl.Collator("pt-BR", {
+  numeric: true,
+  sensitivity: "base",
+});
+
 export const DatabaseList = ({
   databases,
   selected,
@@ -28,8 +36,24 @@ export const DatabaseList = ({
   onToggleAll,
   onDelete,
 }: DatabaseListProps) => {
+  const [sortOption, setSortOption] = useState<SortOption>("name-asc");
   const allSelected =
     databases.length > 0 && databases.every((database) => selected.has(database.name));
+  const sortedDatabases = useMemo(() => {
+    const nextDatabases = [...databases];
+
+    return nextDatabases.sort((first, second) => {
+      if (sortOption === "name-asc") return nameCollator.compare(first.name, second.name);
+      if (sortOption === "name-desc") return nameCollator.compare(second.name, first.name);
+
+      const sizeDifference = first.sizeBytes - second.sizeBytes;
+      if (sizeDifference !== 0) {
+        return sortOption === "size-asc" ? sizeDifference : -sizeDifference;
+      }
+
+      return nameCollator.compare(first.name, second.name);
+    });
+  }, [databases, sortOption]);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
@@ -48,16 +72,34 @@ export const DatabaseList = ({
             </p>
           </div>
         </div>
-        <button
-          className="icon-button"
-          type="button"
-          aria-label="Atualizar bases"
-          title="Atualizar"
-          onClick={onRefresh}
-          disabled={!connected || busy}
-        >
-          <RefreshCw className={busy ? "animate-spin" : ""} size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          {connected && databases.length > 0 ? (
+            <label>
+              <span className="sr-only">Ordenar bases</span>
+              <select
+                className="field h-8 w-[168px] py-0 text-xs"
+                value={sortOption}
+                onChange={(event) => setSortOption(event.target.value as SortOption)}
+                disabled={busy}
+              >
+                <option value="name-asc">Nome: A → Z</option>
+                <option value="name-desc">Nome: Z → A</option>
+                <option value="size-desc">Tamanho: maior</option>
+                <option value="size-asc">Tamanho: menor</option>
+              </select>
+            </label>
+          ) : null}
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="Atualizar bases"
+            title="Atualizar"
+            onClick={onRefresh}
+            disabled={!connected || busy}
+          >
+            <RefreshCw className={busy ? "animate-spin" : ""} size={16} />
+          </button>
+        </div>
       </div>
 
       {connected && databases.length > 0 ? (
@@ -86,7 +128,7 @@ export const DatabaseList = ({
           <EmptyState label="Nenhuma base disponível nesta conexão." />
         ) : (
           <ul className="space-y-1" aria-label="Bases disponíveis">
-            {databases.map((database) => (
+            {sortedDatabases.map((database) => (
               <li key={database.name}>
                 <label className="database-row cursor-pointer">
                   <input
