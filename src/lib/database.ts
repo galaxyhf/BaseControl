@@ -1,6 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ConnectionConfig, DatabaseInfo, DropResult } from "./types";
 
+export const testConnection = async (config: ConnectionConfig) =>
+  invoke<void>("test_connection", { config });
+
 export const listDatabases = async (config: ConnectionConfig) =>
   invoke<DatabaseInfo[]>("list_databases", { config });
 

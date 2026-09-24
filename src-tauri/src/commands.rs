@@ -17,15 +17,37 @@ use crate::models::{ConnectionConfig, DatabaseEngine, DatabaseInfo, DropResult};
 type SqlServerClient = SqlClient<Compat<TcpStream>>;
 
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(10);
+const LIST_DATABASES_TIMEOUT: Duration = Duration::from_secs(12);
+const DATABASE_OPERATION_TIMEOUT: Duration = Duration::from_secs(15);
+
+#[tauri::command]
+pub async fn test_connection(config: ConnectionConfig) -> Result<(), String> {
+    validate_config(&config)?;
+
+    match config.engine {
+        DatabaseEngine::Postgres => {
+            connect_postgres(&config).await?;
+        }
+        DatabaseEngine::Sqlserver => {
+            connect_sql_server(&config).await?;
+        }
+    }
+
+    Ok(())
+}
 
 #[tauri::command]
 pub async fn list_databases(config: ConnectionConfig) -> Result<Vec<DatabaseInfo>, String> {
     validate_config(&config)?;
 
-    match config.engine {
-        DatabaseEngine::Postgres => list_postgres_databases(&config).await,
-        DatabaseEngine::Sqlserver => list_sql_server_databases(&config).await,
-    }
+    timeout(LIST_DATABASES_TIMEOUT, async {
+        match config.engine {
+            DatabaseEngine::Postgres => list_postgres_databases(&config).await,
+            DatabaseEngine::Sqlserver => list_sql_server_databases(&config).await,
+        }
+    })
+    .await
+    .map_err(|_| list_databases_timeout_message())?
 }
 
 #[tauri::command]
@@ -78,12 +100,15 @@ async fn connect_postgres(config: &ConnectionConfig) -> Result<PostgresClient, S
 
 async fn list_postgres_databases(config: &ConnectionConfig) -> Result<Vec<DatabaseInfo>, String> {
     let client = connect_postgres(config).await?;
-    let rows = client
-        .query(
+    let rows = timeout(
+        DATABASE_OPERATION_TIMEOUT,
+        client.query(
             "SELECT datname, pg_database_size(datname) FROM pg_database WHERE datallowconn AND NOT datistemplate AND datname <> 'postgres' ORDER BY datname",
             &[],
-        )
+        ),
+    )
         .await
+        .map_err(|_| list_databases_timeout_message())?
         .map_err(|error| postgres_query_error(&error, "listar as bases"))?;
 
     Ok(rows
@@ -109,25 +134,72 @@ async fn drop_postgres_databases(
             continue;
         }
 
-        let statement = format!(
-            "DROP DATABASE \"{}\" WITH (FORCE)",
-            name.replace('"', "\"\"")
-        );
-        match client.execute(&statement, &[]).await {
-            Ok(_) => results.push(success_result(name)),
-            Err(error) => results.push(failed_result(
-                name,
-                postgres_query_error(&error, "excluir a base"),
-            )),
+        match drop_postgres_database(&client, &name).await {
+            Ok(()) => results.push(success_result(name)),
+            Err(message) => results.push(failed_result(name, message)),
         }
     }
     Ok(results)
 }
 
-async fn postgres_deletable_names(client: &PostgresClient) -> Result<HashSet<String>, String> {
-    let rows = client
-        .query("SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate AND datname <> 'postgres'", &[])
+async fn drop_postgres_database(client: &PostgresClient, name: &str) -> Result<(), String> {
+    let escaped = name.replace('"', "\"\"");
+    let force_statement = format!("DROP DATABASE \"{escaped}\" WITH (FORCE)");
+
+    match timeout(
+        DATABASE_OPERATION_TIMEOUT,
+        client.execute(&force_statement, &[]),
+    )
+    .await
+    {
+        Ok(Ok(_)) => Ok(()),
+        Ok(Err(error)) if postgres_requires_legacy_drop(&error) => {
+            drop_postgres_database_legacy(client, name, &escaped).await
+        }
+        Ok(Err(error)) => Err(postgres_query_error(&error, "excluir a base")),
+        Err(_) => Err(drop_database_timeout_message()),
+    }
+}
+
+async fn drop_postgres_database_legacy(
+    client: &PostgresClient,
+    name: &str,
+    escaped: &str,
+) -> Result<(), String> {
+    timeout(
+        DATABASE_OPERATION_TIMEOUT,
+        client.query(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()",
+            &[&name],
+        ),
+    )
+    .await
+    .map_err(|_| drop_database_timeout_message())?
+    .map_err(|error| postgres_query_error(&error, "encerrar as conexões da base"))?;
+
+    let statement = format!("DROP DATABASE \"{escaped}\"");
+    timeout(DATABASE_OPERATION_TIMEOUT, client.execute(&statement, &[]))
         .await
+        .map_err(|_| drop_database_timeout_message())?
+        .map_err(|error| postgres_query_error(&error, "excluir a base"))?;
+
+    Ok(())
+}
+
+fn postgres_requires_legacy_drop(error: &PostgresError) -> bool {
+    matches!(
+        error.code(),
+        Some(code) if code == &SqlState::SYNTAX_ERROR || code == &SqlState::FEATURE_NOT_SUPPORTED
+    )
+}
+
+async fn postgres_deletable_names(client: &PostgresClient) -> Result<HashSet<String>, String> {
+    let rows = timeout(
+        DATABASE_OPERATION_TIMEOUT,
+        client.query("SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate AND datname <> 'postgres'", &[]),
+    )
+        .await
+        .map_err(|_| drop_database_timeout_message())?
         .map_err(|error| postgres_query_error(&error, "validar as bases"))?;
     Ok(rows.into_iter().map(|row| row.get(0)).collect())
 }
@@ -171,13 +243,17 @@ async fn list_sql_server_databases(config: &ConnectionConfig) -> Result<Vec<Data
 async fn query_sql_server_databases(
     client: &mut SqlServerClient,
 ) -> Result<Vec<DatabaseInfo>, String> {
-    let rows = client
-        .query("SELECT databases.name, CAST(SUM(CAST(master_files.size AS bigint)) * 8192 AS bigint) FROM sys.databases AS databases INNER JOIN sys.master_files AS master_files ON databases.database_id = master_files.database_id WHERE databases.state = 0 AND databases.database_id > 4 GROUP BY databases.name ORDER BY databases.name", &[])
-        .await
-        .map_err(|error| sql_server_query_error(&error, "listar as bases"))?
-        .into_first_result()
-        .await
-        .map_err(|error| sql_server_query_error(&error, "ler as bases"))?;
+    let rows = timeout(DATABASE_OPERATION_TIMEOUT, async {
+        client
+            .query("SELECT databases.name, CAST(SUM(CAST(master_files.size AS bigint)) * 8192 AS bigint) FROM sys.databases AS databases INNER JOIN sys.master_files AS master_files ON databases.database_id = master_files.database_id WHERE databases.state = 0 AND databases.database_id > 4 GROUP BY databases.name ORDER BY databases.name", &[])
+            .await
+            .map_err(|error| sql_server_query_error(&error, "listar as bases"))?
+            .into_first_result()
+            .await
+            .map_err(|error| sql_server_query_error(&error, "ler as bases"))
+    })
+    .await
+    .map_err(|_| list_databases_timeout_message())??;
 
     rows.into_iter()
         .map(|row| {
@@ -217,12 +293,13 @@ async fn drop_sql_server_databases(
         let statement = format!(
             "ALTER DATABASE [{escaped}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{escaped}];"
         );
-        match client.execute(statement, &[]).await {
-            Ok(_) => results.push(success_result(name)),
-            Err(error) => results.push(failed_result(
+        match timeout(DATABASE_OPERATION_TIMEOUT, client.execute(statement, &[])).await {
+            Ok(Ok(_)) => results.push(success_result(name)),
+            Ok(Err(error)) => results.push(failed_result(
                 name,
                 sql_server_query_error(&error, "excluir a base"),
             )),
+            Err(_) => results.push(failed_result(name, drop_database_timeout_message())),
         }
     }
     Ok(results)
@@ -360,6 +437,18 @@ fn postgres_query_error(error: &PostgresError, action: &str) -> String {
         Some(code) if code == &SqlState::UNDEFINED_DATABASE => {
             "A base informada não existe mais.".into()
         }
+        Some(code) if code == &SqlState::OBJECT_IN_USE => {
+            "A base ainda possui conexões, transações preparadas ou recursos de replicação ativos. Encerre-os e tente novamente.".into()
+        }
+        Some(code) if code == &SqlState::DEPENDENT_OBJECTS_STILL_EXIST => {
+            "A base possui recursos dependentes ativos, como slots de replicação ou assinaturas. Remova-os e tente novamente.".into()
+        }
+        Some(code) if code == &SqlState::LOCK_NOT_AVAILABLE => {
+            "A base está bloqueada por outra operação. Aguarde e tente novamente.".into()
+        }
+        Some(code) if code == &SqlState::QUERY_CANCELED => {
+            "A operação foi cancelada pelo PostgreSQL antes de terminar.".into()
+        }
         _ => format!(
             "Não foi possível {action} no PostgreSQL. Verifique as permissões e tente novamente."
         ),
@@ -424,6 +513,14 @@ fn connection_refused_message(database: &str) -> String {
 
 fn connection_timeout_message(database: &str) -> String {
     format!("O {database} não respondeu a tempo. Confira o endereço, a porta, a rede e o firewall.")
+}
+
+fn list_databases_timeout_message() -> String {
+    "A conexão foi aberta, mas o servidor demorou demais para listar as bases. Verifique a rede e se o banco está sobrecarregado ou bloqueado.".into()
+}
+
+fn drop_database_timeout_message() -> String {
+    "O servidor demorou demais para excluir a base. Verifique conexões ou operações que possam estar bloqueando a exclusão.".into()
 }
 
 #[cfg(test)]

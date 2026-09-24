@@ -5,6 +5,7 @@ mod models;
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            commands::test_connection,
             commands::list_databases,
             commands::drop_databases
         ])

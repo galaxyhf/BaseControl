@@ -7,6 +7,7 @@ interface DatabaseListProps {
   databases: DatabaseInfo[];
   selected: Set<string>;
   busy: boolean;
+  loading: boolean;
   connected: boolean;
   engine: DatabaseEngine;
   onRefresh: () => void;
@@ -19,6 +20,7 @@ export const DatabaseList = ({
   databases,
   selected,
   busy,
+  loading,
   connected,
   engine,
   onRefresh,
@@ -78,6 +80,8 @@ export const DatabaseList = ({
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {!connected ? (
           <EmptyState label="Preencha os dados ao lado para listar as bases." />
+        ) : loading && databases.length === 0 ? (
+          <LoadingState />
         ) : databases.length === 0 ? (
           <EmptyState label="Nenhuma base disponível nesta conexão." />
         ) : (
@@ -143,6 +147,15 @@ const EmptyState = ({ label }: { label: string }) => (
         <Database size={18} />
       </div>
       <p className="max-w-56 text-sm leading-5 text-zinc-500">{label}</p>
+    </div>
+  </div>
+);
+
+const LoadingState = () => (
+  <div className="grid h-full min-h-64 place-items-center px-8 text-center">
+    <div>
+      <LoaderCircle className="mx-auto mb-3 animate-spin text-violet-400" size={24} />
+      <p className="text-sm text-zinc-500">Carregando bases...</p>
     </div>
   </div>
 );

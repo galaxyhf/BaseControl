@@ -3,7 +3,7 @@ import { CheckCircle2, DatabaseZap, XCircle } from "lucide-react";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { DatabaseList } from "./components/DatabaseList";
 import { DeleteDialog } from "./components/DeleteDialog";
-import { dropDatabases, getErrorMessage, listDatabases } from "./lib/database";
+import { dropDatabases, getErrorMessage, listDatabases, testConnection } from "./lib/database";
 import type { ConnectionConfig, DatabaseEngine, DatabaseInfo, DropResult } from "./lib/types";
 
 type BusyAction = "connect" | "refresh" | "delete" | null;
@@ -35,10 +35,17 @@ export const App = () => {
   };
 
   const handleConnect = async (connection: ConnectionConfig) => {
-    const connected = await loadDatabases(connection, "connect");
-    if (connected) {
+    setBusy("connect");
+    setError(null);
+    try {
+      await testConnection(connection);
       setConfig(connection);
       setResults([]);
+      setBusy(null);
+      void loadDatabases(connection, "refresh");
+    } catch (connectionError) {
+      setError(getErrorMessage(connectionError));
+      setBusy(null);
     }
   };
 
@@ -133,6 +140,7 @@ export const App = () => {
             databases={databases}
             selected={selected}
             busy={busy !== null}
+            loading={busy === "refresh"}
             connected={config !== null}
             engine={engine}
             onRefresh={() => config && void loadDatabases(config, "refresh")}
