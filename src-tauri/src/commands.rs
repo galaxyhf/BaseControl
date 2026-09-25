@@ -17,8 +17,8 @@ use crate::models::{ConnectionConfig, DatabaseEngine, DatabaseInfo, DropResult};
 type SqlServerClient = SqlClient<Compat<TcpStream>>;
 
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(10);
-const LIST_DATABASES_TIMEOUT: Duration = Duration::from_secs(12);
 const DATABASE_OPERATION_TIMEOUT: Duration = Duration::from_secs(15);
+const DATABASE_SIZE_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[tauri::command]
 pub async fn test_connection(config: ConnectionConfig) -> Result<(), String> {
@@ -40,14 +40,20 @@ pub async fn test_connection(config: ConnectionConfig) -> Result<(), String> {
 pub async fn list_databases(config: ConnectionConfig) -> Result<Vec<DatabaseInfo>, String> {
     validate_config(&config)?;
 
-    timeout(LIST_DATABASES_TIMEOUT, async {
-        match config.engine {
-            DatabaseEngine::Postgres => list_postgres_databases(&config).await,
-            DatabaseEngine::Sqlserver => list_sql_server_databases(&config).await,
-        }
-    })
-    .await
-    .map_err(|_| list_databases_timeout_message())?
+    match config.engine {
+        DatabaseEngine::Postgres => list_postgres_databases(&config).await,
+        DatabaseEngine::Sqlserver => list_sql_server_databases(&config).await,
+    }
+}
+
+#[tauri::command]
+pub async fn get_database_sizes(config: ConnectionConfig) -> Result<Vec<DatabaseInfo>, String> {
+    validate_config(&config)?;
+
+    match config.engine {
+        DatabaseEngine::Postgres => get_postgres_database_sizes(&config).await,
+        DatabaseEngine::Sqlserver => get_sql_server_database_sizes(&config).await,
+    }
 }
 
 #[tauri::command]
@@ -103,13 +109,37 @@ async fn list_postgres_databases(config: &ConnectionConfig) -> Result<Vec<Databa
     let rows = timeout(
         DATABASE_OPERATION_TIMEOUT,
         client.query(
-            "SELECT datname, pg_database_size(datname) FROM pg_database WHERE datallowconn AND NOT datistemplate AND datname <> 'postgres' ORDER BY datname",
+            "SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate AND datname <> 'postgres' ORDER BY datname",
             &[],
         ),
     )
         .await
         .map_err(|_| list_databases_timeout_message())?
         .map_err(|error| postgres_query_error(&error, "listar as bases"))?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| DatabaseInfo {
+            name: row.get(0),
+            size_bytes: None,
+        })
+        .collect())
+}
+
+async fn get_postgres_database_sizes(
+    config: &ConnectionConfig,
+) -> Result<Vec<DatabaseInfo>, String> {
+    let client = connect_postgres(config).await?;
+    let rows = timeout(
+        DATABASE_SIZE_TIMEOUT,
+        client.query(
+            "SELECT datname, CASE WHEN has_database_privilege(datname, 'CONNECT') THEN pg_database_size(datname) ELSE NULL END FROM pg_database WHERE datallowconn AND NOT datistemplate AND datname <> 'postgres' ORDER BY datname",
+            &[],
+        ),
+    )
+    .await
+    .map_err(|_| database_sizes_timeout_message())?
+    .map_err(|error| postgres_query_error(&error, "calcular o tamanho das bases"))?;
 
     Ok(rows
         .into_iter()
@@ -237,15 +267,12 @@ async fn connect_sql_server(config: &ConnectionConfig) -> Result<SqlServerClient
 
 async fn list_sql_server_databases(config: &ConnectionConfig) -> Result<Vec<DatabaseInfo>, String> {
     let mut client = connect_sql_server(config).await?;
-    query_sql_server_databases(&mut client).await
-}
-
-async fn query_sql_server_databases(
-    client: &mut SqlServerClient,
-) -> Result<Vec<DatabaseInfo>, String> {
     let rows = timeout(DATABASE_OPERATION_TIMEOUT, async {
         client
-            .query("SELECT databases.name, CAST(SUM(CAST(master_files.size AS bigint)) * 8192 AS bigint) FROM sys.databases AS databases INNER JOIN sys.master_files AS master_files ON databases.database_id = master_files.database_id WHERE databases.state = 0 AND databases.database_id > 4 GROUP BY databases.name ORDER BY databases.name", &[])
+            .query(
+                "SELECT name FROM sys.databases WHERE state = 0 AND database_id > 4 ORDER BY name",
+                &[],
+            )
             .await
             .map_err(|error| sql_server_query_error(&error, "listar as bases"))?
             .into_first_result()
@@ -260,12 +287,41 @@ async fn query_sql_server_databases(
             let name = row
                 .get::<&str, _>(0)
                 .ok_or_else(|| "O servidor retornou uma base sem nome.".to_string())?;
+            Ok(DatabaseInfo {
+                name: name.to_string(),
+                size_bytes: None,
+            })
+        })
+        .collect()
+}
+
+async fn get_sql_server_database_sizes(
+    config: &ConnectionConfig,
+) -> Result<Vec<DatabaseInfo>, String> {
+    let mut client = connect_sql_server(config).await?;
+    let rows = timeout(DATABASE_SIZE_TIMEOUT, async {
+        client
+            .query("SELECT databases.name, CAST(SUM(CAST(master_files.size AS bigint)) * 8192 AS bigint) FROM sys.databases AS databases INNER JOIN sys.master_files AS master_files ON databases.database_id = master_files.database_id WHERE databases.state = 0 AND databases.database_id > 4 GROUP BY databases.name ORDER BY databases.name", &[])
+            .await
+            .map_err(|error| sql_server_query_error(&error, "listar as bases"))?
+            .into_first_result()
+            .await
+            .map_err(|error| sql_server_query_error(&error, "ler as bases"))
+    })
+    .await
+    .map_err(|_| database_sizes_timeout_message())??;
+
+    rows.into_iter()
+        .map(|row| {
+            let name = row
+                .get::<&str, _>(0)
+                .ok_or_else(|| "O servidor retornou uma base sem nome.".to_string())?;
             let size_bytes = row
                 .get::<i64, _>(1)
                 .ok_or_else(|| format!("O servidor não retornou o tamanho da base {name}."))?;
             Ok(DatabaseInfo {
                 name: name.to_string(),
-                size_bytes,
+                size_bytes: Some(size_bytes),
             })
         })
         .collect()
@@ -276,11 +332,7 @@ async fn drop_sql_server_databases(
     names: Vec<String>,
 ) -> Result<Vec<DropResult>, String> {
     let mut client = connect_sql_server(config).await?;
-    let available: HashSet<String> = query_sql_server_databases(&mut client)
-        .await?
-        .into_iter()
-        .map(|database| database.name)
-        .collect();
+    let available = sql_server_deletable_names(&mut client).await?;
     let mut results = Vec::with_capacity(names.len());
 
     for name in names {
@@ -303,6 +355,32 @@ async fn drop_sql_server_databases(
         }
     }
     Ok(results)
+}
+
+async fn sql_server_deletable_names(
+    client: &mut SqlServerClient,
+) -> Result<HashSet<String>, String> {
+    let rows = timeout(
+        DATABASE_OPERATION_TIMEOUT,
+        client.query(
+            "SELECT name FROM sys.databases WHERE state = 0 AND database_id > 4",
+            &[],
+        ),
+    )
+    .await
+    .map_err(|_| drop_database_timeout_message())?
+    .map_err(|error| sql_server_query_error(&error, "validar as bases"))?
+    .into_first_result()
+    .await
+    .map_err(|error| sql_server_query_error(&error, "validar as bases"))?;
+
+    rows.into_iter()
+        .map(|row| {
+            row.get::<&str, _>(0)
+                .map(str::to_string)
+                .ok_or_else(|| "O servidor retornou uma base sem nome.".to_string())
+        })
+        .collect()
 }
 
 fn success_result(name: String) -> DropResult {
@@ -517,6 +595,10 @@ fn connection_timeout_message(database: &str) -> String {
 
 fn list_databases_timeout_message() -> String {
     "A conexão foi aberta, mas o servidor demorou demais para listar as bases. Verifique a rede e se o banco está sobrecarregado ou bloqueado.".into()
+}
+
+fn database_sizes_timeout_message() -> String {
+    "O servidor demorou demais para calcular os tamanhos.".into()
 }
 
 fn drop_database_timeout_message() -> String {

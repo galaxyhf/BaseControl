@@ -7,6 +7,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::test_connection,
             commands::list_databases,
+            commands::get_database_sizes,
             commands::drop_databases
         ])
         .run(tauri::generate_context!())

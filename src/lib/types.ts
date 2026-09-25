@@ -10,7 +10,7 @@ export interface ConnectionConfig {
 
 export interface DatabaseInfo {
   name: string;
-  sizeBytes: number;
+  sizeBytes: number | null;
 }
 
 export interface DropResult {

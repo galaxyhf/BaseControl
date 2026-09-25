@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CheckCircle2, DatabaseZap, XCircle } from "lucide-react";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { DatabaseList } from "./components/DatabaseList";
 import { DeleteDialog } from "./components/DeleteDialog";
-import { dropDatabases, getErrorMessage, listDatabases, testConnection } from "./lib/database";
+import {
+  dropDatabases,
+  getDatabaseSizes,
+  getErrorMessage,
+  listDatabases,
+  testConnection,
+} from "./lib/database";
 import type { ConnectionConfig, DatabaseEngine, DatabaseInfo, DropResult } from "./lib/types";
 
 type BusyAction = "connect" | "refresh" | "delete" | null;
@@ -17,20 +23,51 @@ export const App = () => {
   const [results, setResults] = useState<DropResult[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [engine, setEngine] = useState<DatabaseEngine>("postgres");
+  const [loadingSizes, setLoadingSizes] = useState(false);
+  const databaseRequestId = useRef(0);
+
+  const loadDatabaseSizes = async (connection: ConnectionConfig, requestId: number) => {
+    setLoadingSizes(true);
+    try {
+      const sizes = await getDatabaseSizes(connection);
+      if (databaseRequestId.current !== requestId) return;
+
+      const sizesByName = new Map(sizes.map((database) => [database.name, database.sizeBytes]));
+      setDatabases((current) =>
+        current.map((database) => ({
+          ...database,
+          sizeBytes: sizesByName.get(database.name) ?? null,
+        })),
+      );
+    } catch (sizeError) {
+      if (databaseRequestId.current === requestId) {
+        setError(
+          `As bases foram listadas, mas os tamanhos estão indisponíveis. ${getErrorMessage(sizeError)}`,
+        );
+      }
+    } finally {
+      if (databaseRequestId.current === requestId) setLoadingSizes(false);
+    }
+  };
 
   const loadDatabases = async (connection: ConnectionConfig, action: BusyAction) => {
+    const requestId = ++databaseRequestId.current;
     setBusy(action);
+    setLoadingSizes(false);
     setError(null);
     try {
       const nextDatabases = await listDatabases(connection);
+      if (databaseRequestId.current !== requestId) return false;
+
       setDatabases(nextDatabases);
       setSelected(new Set());
+      void loadDatabaseSizes(connection, requestId);
       return true;
     } catch (loadError) {
-      setError(getErrorMessage(loadError));
+      if (databaseRequestId.current === requestId) setError(getErrorMessage(loadError));
       return false;
     } finally {
-      setBusy(null);
+      if (databaseRequestId.current === requestId) setBusy(null);
     }
   };
 
@@ -50,11 +87,13 @@ export const App = () => {
   };
 
   const handleDisconnect = () => {
+    databaseRequestId.current += 1;
     setConfig(null);
     setDatabases([]);
     setSelected(new Set());
     setResults([]);
     setError(null);
+    setLoadingSizes(false);
   };
 
   const handleToggle = (name: string) => {
@@ -73,8 +112,10 @@ export const App = () => {
 
   const handleDelete = async () => {
     if (!config || selected.size === 0) return;
+    databaseRequestId.current += 1;
     setConfirming(false);
     setBusy("delete");
+    setLoadingSizes(false);
     setError(null);
     try {
       const dropResults = await dropDatabases(config, [...selected]);
@@ -141,6 +182,7 @@ export const App = () => {
             selected={selected}
             busy={busy !== null}
             loading={busy === "refresh"}
+            loadingSizes={loadingSizes}
             connected={config !== null}
             engine={engine}
             onRefresh={() => config && void loadDatabases(config, "refresh")}

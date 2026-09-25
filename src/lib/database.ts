@@ -7,6 +7,9 @@ export const testConnection = async (config: ConnectionConfig) =>
 export const listDatabases = async (config: ConnectionConfig) =>
   invoke<DatabaseInfo[]>("list_databases", { config });
 
+export const getDatabaseSizes = async (config: ConnectionConfig) =>
+  invoke<DatabaseInfo[]>("get_database_sizes", { config });
+
 export const dropDatabases = async (config: ConnectionConfig, names: string[]) =>
   invoke<DropResult[]>("drop_databases", { config, names });
 

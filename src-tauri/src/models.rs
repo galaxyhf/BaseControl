@@ -21,7 +21,7 @@ pub enum DatabaseEngine {
 #[serde(rename_all = "camelCase")]
 pub struct DatabaseInfo {
     pub name: String,
-    pub size_bytes: i64,
+    pub size_bytes: Option<i64>,
 }
 
 #[derive(Serialize)]

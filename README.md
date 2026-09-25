@@ -2,6 +2,8 @@
 
 Aplicativo desktop enxuto para listar e excluir bases PostgreSQL e SQL Server.
 
+Os nomes das bases são carregados primeiro. Os tamanhos são calculados em uma segunda etapa e não impedem o gerenciamento caso o servidor demore ou não consiga retorná-los.
+
 ## Stack
 
 - Tauri 2 e Rust para janela, conexões e operações de banco

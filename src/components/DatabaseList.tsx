@@ -9,6 +9,7 @@ interface DatabaseListProps {
   selected: Set<string>;
   busy: boolean;
   loading: boolean;
+  loadingSizes: boolean;
   connected: boolean;
   engine: DatabaseEngine;
   onRefresh: () => void;
@@ -29,6 +30,7 @@ export const DatabaseList = ({
   selected,
   busy,
   loading,
+  loadingSizes,
   connected,
   engine,
   onRefresh,
@@ -45,6 +47,12 @@ export const DatabaseList = ({
     return nextDatabases.sort((first, second) => {
       if (sortOption === "name-asc") return nameCollator.compare(first.name, second.name);
       if (sortOption === "name-desc") return nameCollator.compare(second.name, first.name);
+
+      if (first.sizeBytes === null && second.sizeBytes === null) {
+        return nameCollator.compare(first.name, second.name);
+      }
+      if (first.sizeBytes === null) return 1;
+      if (second.sizeBytes === null) return -1;
 
       const sizeDifference = first.sizeBytes - second.sizeBytes;
       if (sizeDifference !== 0) {
@@ -68,7 +76,9 @@ export const DatabaseList = ({
           <div>
             <h2 className="text-sm font-medium text-zinc-100">Bases de dados</h2>
             <p className="mt-0.5 text-xs text-zinc-500">
-              {connected ? `${databases.length} encontradas` : "Conecte a um servidor"}
+              {connected
+                ? `${databases.length} encontradas${loadingSizes ? " · calculando tamanhos" : ""}`
+                : "Conecte a um servidor"}
             </p>
           </div>
         </div>
@@ -95,9 +105,9 @@ export const DatabaseList = ({
             aria-label="Atualizar bases"
             title="Atualizar"
             onClick={onRefresh}
-            disabled={!connected || busy}
+            disabled={!connected || busy || loadingSizes}
           >
-            <RefreshCw className={busy ? "animate-spin" : ""} size={16} />
+            <RefreshCw className={busy || loadingSizes ? "animate-spin" : ""} size={16} />
           </button>
         </div>
       </div>
@@ -145,7 +155,11 @@ export const DatabaseList = ({
                     {database.name}
                   </span>
                   <span className="shrink-0 text-xs tabular-nums text-zinc-500">
-                    {formatBytes(database.sizeBytes)}
+                    {database.sizeBytes === null
+                      ? loadingSizes
+                        ? "Calculando…"
+                        : "Indisponível"
+                      : formatBytes(database.sizeBytes)}
                   </span>
                 </label>
               </li>
